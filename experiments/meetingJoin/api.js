@@ -63,27 +63,7 @@ function findMeetingLink(sources, diagnostics) {
         continue;
       }
 
-      const end = match.index + match[0].length;
-      const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"')\\]+/gi)];
-      const previousUrl = previousUrls.at(-1);
-      const contextStart = Math.max(
-        previousUrl ? previousUrl.index + previousUrl[0].length : 0,
-        match.index - 160
-      );
-      const linkLabel = source.slice(contextStart, match.index)
-        .replace(/<[^>]*>/g, " ")
-        .trim()
-        .replace(/[\s\[<(]+$/, "")
-        .trim();
-      const previous = links.get(url.href);
-      links.set(url.href, {
-        url: url.href,
-        // shortcut: common English and Spanish labels only; add other translations if needed.
-        labeledJoin: Boolean(
-          previous?.labeledJoin ||
-          /\b(?:join|attend|unirse|entrar|asistir)(?:\s+(?:the\s+)?(?:meeting|call|session)|\s+a(?:\s+la)?\s+(?:reunión|reunion|llamada|sesión|sesion))?(?:\s+(?:now|ahora))?\s*:?$/i.test(linkLabel)
-        ),
-      });
+      links.set(url.href, { url: url.href });
     }
   }
 
@@ -97,9 +77,13 @@ function findMeetingLink(sources, diagnostics) {
     return known[0].url;
   }
 
-  const labeled = candidates.filter(link => link.labeledJoin);
-  if (labeled.length === 1) {
-    return labeled[0].url;
+  if (known.length === 2) {
+    // shortcut: only disambiguate Teams /meet/ vs /l/meetup-join/; add URI rules for other ambiguous providers.
+    const teamsMeet = known.find(link => meetingLinkType(link.url) === "Teams meet");
+    const teamsJoin = known.find(link => meetingLinkType(link.url) === "Teams join");
+    if (teamsMeet && teamsJoin) {
+      return teamsMeet.url;
+    }
   }
 
   return candidates.length === 1 ? candidates[0].url : null;
