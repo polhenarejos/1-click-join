@@ -172,7 +172,7 @@ function attachToWindow(window) {
       appearance: none;
       margin-inline-start: 0.3em;
       min-width: 0;
-      padding: 0 0.15em;
+      padding: 0 0.25em;
       border: 0;
       border-radius: 1em;
       background: #188038;
@@ -180,6 +180,7 @@ function attachToWindow(window) {
       cursor: pointer;
       font: inherit;
       font-size: 0.8em;
+      font-weight: 700;
       line-height: 1;
       white-space: nowrap;
     }
