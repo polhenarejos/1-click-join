@@ -35,19 +35,17 @@ function getItemSources(item) {
 }
 
 function parseHttpUrl(value) {
-  try {
-    const uri = Services.io.newURI(value);
-    if (uri.scheme !== "https" && uri.scheme !== "http") {
-      return null;
-    }
-    return {
-      href: uri.spec,
-      hostname: uri.host.toLowerCase(),
-      pathname: uri.path.toLowerCase(),
-    };
-  } catch {
+  const match = /^(https?):\/\/([^/?#]+)([^?#]*)/i.exec(value);
+  if (!match) {
     return null;
   }
+
+  const authority = match[2].slice(match[2].lastIndexOf("@") + 1);
+  return {
+    href: value,
+    hostname: authority.replace(/:\d+$/, "").toLowerCase(),
+    pathname: match[3].toLowerCase(),
+  };
 }
 
 function findMeetingLink(sources, diagnostics) {
