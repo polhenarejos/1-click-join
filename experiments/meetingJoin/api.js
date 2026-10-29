@@ -38,7 +38,7 @@ function findMeetingLink(sources) {
   const links = new Map();
 
   for (const source of sources) {
-    for (const match of source.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+    for (const match of source.matchAll(/https?:\/\/[^\s<>"')\\]+/gi)) {
       const raw = match[0]
         .replace(/&amp;/gi, "&")
         .replace(/&gt;$/i, "")
@@ -50,9 +50,9 @@ function findMeetingLink(sources) {
         }
 
         const end = match.index + match[0].length;
-        const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"']+/gi)];
+        const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"')\\]+/gi)];
         const previousUrl = previousUrls.at(-1);
-        const nextUrl = /https?:\/\/[^\s<>"']+/gi.exec(source.slice(end));
+        const nextUrl = /https?:\/\/[^\s<>"')\\]+/gi.exec(source.slice(end));
         const contextStart = Math.max(
           previousUrl ? previousUrl.index + previousUrl[0].length : 0,
           match.index - 160
@@ -183,7 +183,7 @@ function attachToWindow(window) {
           itemsWithText++;
         }
         urls += sources.reduce(
-          (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"']+/gi)].length,
+          (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"')\\]+/gi)].length,
           0
         );
         const url = findMeetingLink(sources);
