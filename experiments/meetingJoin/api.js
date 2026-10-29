@@ -126,14 +126,21 @@ function openMeetingLink(url, appUrl) {
   if (nativeUrl) {
     try {
       const scheme = nativeUrl.slice(0, nativeUrl.indexOf(":"));
-      if (Services.externalProtocolService.externalProtocolHandlerExists(scheme)) {
+      const externalProtocolService = Cc[
+        "@mozilla.org/uriloader/external-protocol-service;1"
+      ].getService(Ci.nsIExternalProtocolService);
+      if (externalProtocolService.externalProtocolHandlerExists(scheme)) {
         console.info(LOG_PREFIX, `Opening meeting with ${scheme} app handler.`);
         openLinkExternally(nativeUrl, { addToHistory: false });
         return;
       }
       console.info(LOG_PREFIX, `${scheme} app handler unavailable; opening web link.`);
     } catch (error) {
-      console.info(LOG_PREFIX, "App launch unavailable; opening the web link.", error?.name);
+      console.info(
+        LOG_PREFIX,
+        "App launch unavailable; opening the web link.",
+        error?.message || error?.name
+      );
     }
   } else {
     console.info(LOG_PREFIX, `${meetingLinkType(appUrl || url)} has no direct app URI; opening web link.`);
