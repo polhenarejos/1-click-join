@@ -78,10 +78,10 @@ function findMeetingLink(sources, diagnostics) {
       const previous = links.get(url.href);
       links.set(url.href, {
         url: url.href,
-        // shortcut: English labels only; add invite-specific translations when they fail to disambiguate links.
+        // shortcut: common English and Spanish labels only; add other translations if needed.
         labeledJoin: Boolean(
           previous?.labeledJoin ||
-          /\b(?:join|attend)(?:\s+(?:the\s+)?(?:meeting|call|session))?(?:\s+now)?\s*:?$/i.test(linkLabel)
+          /\b(?:join|attend|unirse|entrar|asistir)(?:\s+(?:the\s+)?(?:meeting|call|session)|\s+a(?:\s+la)?\s+(?:reunión|reunion|llamada|sesión|sesion))?(?:\s+(?:now|ahora))?\s*:?$/i.test(linkLabel)
         ),
       });
     }
