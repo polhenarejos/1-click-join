@@ -17,3 +17,6 @@ Teams meeting-join links, Google Meet, Zoom, Webex, GoTo, and Whereby links are 
 
 This prototype targets Thunderbird 153.6.x, including 153.6.0. It uses a Thunderbird Experiment API to add a control to the built-in Today Pane. Thunderbird grants Experiment APIs **full, unrestricted access** to the application and computer, so it may show a broad permission prompt. Its UI integration also depends on Thunderbird's internal Today Pane markup and may need updates when Thunderbird changes.
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 only. See [LICENSE](LICENSE).
