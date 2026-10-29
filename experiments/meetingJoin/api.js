@@ -74,7 +74,7 @@ function findMeetingLink(sources, diagnostics) {
   }
   const known = candidates.filter(link => isKnownMeetingLink(link.url));
   if (known.length === 1) {
-    return known[0].url;
+    return { url: known[0].url };
   }
 
   if (known.length === 2) {
@@ -82,11 +82,56 @@ function findMeetingLink(sources, diagnostics) {
     const teamsMeet = known.find(link => meetingLinkType(link.url) === "Teams meet");
     const teamsJoin = known.find(link => meetingLinkType(link.url) === "Teams join");
     if (teamsMeet && teamsJoin) {
-      return teamsMeet.url;
+      return { url: teamsMeet.url, appUrl: teamsJoin.url };
     }
   }
 
-  return candidates.length === 1 ? candidates[0].url : null;
+  return candidates.length === 1 ? { url: candidates[0].url } : null;
+}
+
+// shortcut: direct app launch only for Teams /l/ and numeric Zoom /j/ URLs; add other providers when they expose a stable join URI.
+function nativeMeetingUri(value) {
+  if (meetingLinkType(value) === "Teams join" && /^https:\/\/teams\.microsoft\.com\/l\//i.test(value)) {
+    return value.replace(/^https:/i, "msteams:");
+  }
+
+  if (meetingLinkType(value) !== "Zoom") {
+    return null;
+  }
+
+  const url = new URL(value);
+  const meetingId = url.pathname.match(/^\/j\/(\d+)\/?$/)?.[1];
+  if (!meetingId) {
+    return null;
+  }
+
+  const appUrl = new URL("zoommtg://zoom.us/join");
+  appUrl.searchParams.set("action", "join");
+  appUrl.searchParams.set("confno", meetingId);
+  const password = url.searchParams.get("pwd");
+  if (password) {
+    appUrl.searchParams.set("pwd", password);
+  }
+  return appUrl.href;
+}
+
+function openMeetingLink(url, appUrl) {
+  const { openLinkExternally } = ChromeUtils.importESModule(
+    "resource:///modules/LinkHelper.sys.mjs"
+  );
+  const nativeUrl = nativeMeetingUri(appUrl || url);
+  if (nativeUrl) {
+    try {
+      const scheme = nativeUrl.slice(0, nativeUrl.indexOf(":"));
+      if (Services.externalProtocolService.externalProtocolHandlerExists(scheme)) {
+        openLinkExternally(nativeUrl, { addToHistory: false });
+        return;
+      }
+    } catch (error) {
+      console.info(LOG_PREFIX, "App launch unavailable; opening the web link.", error?.name);
+    }
+  }
+  openLinkExternally(url, { addToHistory: false });
 }
 
 function meetingLinkType(value) {
@@ -219,10 +264,11 @@ function attachToWindow(window) {
           (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"')\\]+/gi)].length,
           0
         );
-        const url = findMeetingLink(sources, diagnostics);
-        if (!url) {
+        const meetingLink = findMeetingLink(sources, diagnostics);
+        if (!meetingLink) {
           continue;
         }
+        const { url, appUrl } = meetingLink;
         matches++;
 
         const anchor = row.querySelector(".agenda-listitem-relative, .agenda-listitem-title");
@@ -242,8 +288,7 @@ function attachToWindow(window) {
           event.stopPropagation();
           console.info(LOG_PREFIX, "Join badge clicked.");
           try {
-            ChromeUtils.importESModule("resource:///modules/LinkHelper.sys.mjs")
-              .openLinkExternally(url, { addToHistory: false });
+            openMeetingLink(url, appUrl);
           } catch (error) {
             console.error(LOG_PREFIX, "Could not open meeting link.", error?.name);
           }
