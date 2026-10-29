@@ -34,7 +34,23 @@ function getItemSources(item) {
     .filter(value => typeof value === "string" && value);
 }
 
-function findMeetingLink(sources, urlTypes) {
+function parseHttpUrl(value) {
+  try {
+    const uri = Services.io.newURI(value);
+    if (uri.scheme !== "https" && uri.scheme !== "http") {
+      return null;
+    }
+    return {
+      href: uri.spec,
+      hostname: uri.host.toLowerCase(),
+      pathname: uri.path.toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function findMeetingLink(sources, diagnostics) {
   const links = new Map();
 
   for (const source of sources) {
@@ -43,38 +59,35 @@ function findMeetingLink(sources, urlTypes) {
         .replace(/&amp;/gi, "&")
         .replace(/&gt;$/i, "")
         .replace(/[),.;!?]+$/g, "");
-      try {
-        const url = new URL(raw);
-        if (url.protocol !== "https:" && url.protocol !== "http:") {
-          continue;
-        }
-
-        const end = match.index + match[0].length;
-        const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"')\\]+/gi)];
-        const previousUrl = previousUrls.at(-1);
-        const nextUrl = /https?:\/\/[^\s<>"')\\]+/gi.exec(source.slice(end));
-        const contextStart = Math.max(
-          previousUrl ? previousUrl.index + previousUrl[0].length : 0,
-          match.index - 160
-        );
-        const contextEnd = nextUrl ? end + nextUrl.index : Math.min(source.length, end + 160);
-        const linkContext = `${source.slice(contextStart, match.index)} ${source.slice(end, contextEnd)}`
-          .replace(/<[^>]*>/g, " ");
-        const previous = links.get(url.href);
-        links.set(url.href, {
-          url: url.href,
-          labeledJoin: Boolean(previous?.labeledJoin || /\b(join|attend)\b/i.test(linkContext)),
-        });
-      } catch {
-        // Ignore malformed invitation URLs.
+      const url = parseHttpUrl(raw);
+      if (!url) {
+        diagnostics.parseFailures++;
+        continue;
       }
+
+      const end = match.index + match[0].length;
+      const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"')\\]+/gi)];
+      const previousUrl = previousUrls.at(-1);
+      const nextUrl = /https?:\/\/[^\s<>"')\\]+/gi.exec(source.slice(end));
+      const contextStart = Math.max(
+        previousUrl ? previousUrl.index + previousUrl[0].length : 0,
+        match.index - 160
+      );
+      const contextEnd = nextUrl ? end + nextUrl.index : Math.min(source.length, end + 160);
+      const linkContext = `${source.slice(contextStart, match.index)} ${source.slice(end, contextEnd)}`
+        .replace(/<[^>]*>/g, " ");
+      const previous = links.get(url.href);
+      links.set(url.href, {
+        url: url.href,
+        labeledJoin: Boolean(previous?.labeledJoin || /\b(join|attend)\b/i.test(linkContext)),
+      });
     }
   }
 
   const candidates = [...links.values()];
   for (const link of candidates) {
     const type = meetingLinkType(link.url);
-    urlTypes?.set(type, (urlTypes.get(type) || 0) + 1);
+    diagnostics.urlTypes.set(type, (diagnostics.urlTypes.get(type) || 0) + 1);
   }
   const known = candidates.filter(link => isKnownMeetingLink(link.url));
   if (known.length === 1) {
@@ -90,9 +103,11 @@ function findMeetingLink(sources, urlTypes) {
 }
 
 function meetingLinkType(value) {
-  const url = new URL(value);
-  const host = url.hostname.toLowerCase();
-  const path = url.pathname.toLowerCase();
+  const url = parseHttpUrl(value);
+  if (!url) {
+    return "Other";
+  }
+  const { hostname: host, pathname: path } = url;
 
   if (host === "teams.microsoft.com" || host.endsWith(".teams.microsoft.com")) {
     if (path.includes("/l/meetup-join/")) {
@@ -192,7 +207,7 @@ function attachToWindow(window) {
       let urls = 0;
       let matches = 0;
       let added = 0;
-      const urlTypes = new Map();
+      const diagnostics = { urlTypes: new Map(), parseFailures: 0 };
 
       for (const row of rows) {
         if (row.querySelector("button[data-one-click-join]")) {
@@ -213,7 +228,7 @@ function attachToWindow(window) {
           (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"')\\]+/gi)].length,
           0
         );
-        const url = findMeetingLink(sources, urlTypes);
+        const url = findMeetingLink(sources, diagnostics);
         if (!url) {
           continue;
         }
@@ -244,7 +259,7 @@ function attachToWindow(window) {
       if (!loggedFirstScan && rows.length) {
         console.info(
           LOG_PREFIX,
-          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with link fields, ${urls} URLs, ${matches} meeting links, ${added} badges. URL types: ${[...urlTypes].map(([type, count]) => `${type}=${count}`).join(", ") || "none"}.`
+          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with link fields, ${urls} URLs, ${matches} meeting links, ${added} badges, ${diagnostics.parseFailures} parse failures. URL types: ${[...diagnostics.urlTypes].map(([type, count]) => `${type}=${count}`).join(", ") || "none"}.`
         );
         loggedFirstScan = true;
       }
