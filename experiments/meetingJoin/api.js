@@ -21,6 +21,7 @@ function getItemSources(item) {
     "URL",
     "LOCATION",
     "CONFERENCE",
+    "X-GOOGLE-CONFERENCE",
     "X-MICROSOFT-SKYPETEAMSMEETINGURL",
   ]
     .map(property => {
@@ -49,15 +50,20 @@ function findMeetingLink(sources) {
         }
 
         const end = match.index + match[0].length;
-        const lineStart = source.lastIndexOf("\n", match.index) + 1;
-        const lineEnd = source.indexOf("\n", end);
-        const line = source
-          .slice(lineStart, lineEnd < 0 ? source.length : lineEnd)
-          .replace(/https?:\/\/\S+/gi, " ");
+        const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"']+/gi)];
+        const previousUrl = previousUrls.at(-1);
+        const nextUrl = /https?:\/\/[^\s<>"']+/gi.exec(source.slice(end));
+        const contextStart = Math.max(
+          previousUrl ? previousUrl.index + previousUrl[0].length : 0,
+          match.index - 160
+        );
+        const contextEnd = nextUrl ? end + nextUrl.index : Math.min(source.length, end + 160);
+        const linkContext = `${source.slice(contextStart, match.index)} ${source.slice(end, contextEnd)}`
+          .replace(/<[^>]*>/g, " ");
         const previous = links.get(url.href);
         links.set(url.href, {
           url: url.href,
-          labeledJoin: Boolean(previous?.labeledJoin || /\b(join|attend)\b/i.test(line)),
+          labeledJoin: Boolean(previous?.labeledJoin || /\b(join|attend)\b/i.test(linkContext)),
         });
       } catch {
         // Ignore malformed invitation URLs.
@@ -85,7 +91,7 @@ function isKnownMeetingLink(value) {
   const path = url.pathname.toLowerCase();
 
   if (host === "teams.microsoft.com" || host.endsWith(".teams.microsoft.com")) {
-    return path.includes("/l/meetup-join/");
+    return path.includes("/l/meetup-join/") || path.startsWith("/meet/");
   }
   if (host === "teams.live.com") {
     return path.startsWith("/meet/");
