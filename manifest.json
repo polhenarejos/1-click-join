@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "One-Click Meeting Join",
+  "version": "0.1.0",
+  "description": "Adds a Join badge to calendar events with a meeting link.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "one-click-meeting-join@local",
+      "strict_min_version": "153.6.0",
+      "strict_max_version": "153.*"
+    }
+  },
+  "experiment_apis": {
+    "MeetingJoin": {
+      "schema": "experiments/meetingJoin/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["MeetingJoin"]],
+        "script": "experiments/meetingJoin/api.js",
+        "events": ["startup"]
+      }
+    }
+  }
+}
+
