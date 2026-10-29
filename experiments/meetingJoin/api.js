@@ -34,7 +34,7 @@ function getItemSources(item) {
     .filter(value => typeof value === "string" && value);
 }
 
-function findMeetingLink(sources) {
+function findMeetingLink(sources, urlTypes) {
   const links = new Map();
 
   for (const source of sources) {
@@ -72,6 +72,10 @@ function findMeetingLink(sources) {
   }
 
   const candidates = [...links.values()];
+  for (const link of candidates) {
+    const type = meetingLinkType(link.url);
+    urlTypes?.set(type, (urlTypes.get(type) || 0) + 1);
+  }
   const known = candidates.filter(link => isKnownMeetingLink(link.url));
   if (known.length === 1) {
     return known[0].url;
@@ -85,27 +89,49 @@ function findMeetingLink(sources) {
   return candidates.length === 1 ? candidates[0].url : null;
 }
 
-function isKnownMeetingLink(value) {
+function meetingLinkType(value) {
   const url = new URL(value);
   const host = url.hostname.toLowerCase();
   const path = url.pathname.toLowerCase();
 
   if (host === "teams.microsoft.com" || host.endsWith(".teams.microsoft.com")) {
-    return path.includes("/l/meetup-join/") || path.startsWith("/meet/");
+    if (path.includes("/l/meetup-join/")) {
+      return "Teams join";
+    }
+    if (path.startsWith("/meet/")) {
+      return "Teams meet";
+    }
+    return path.includes("/meetingoptions/") ? "Teams options" : "Teams other";
   }
   if (host === "teams.live.com") {
-    return path.startsWith("/meet/");
+    return path.startsWith("/meet/") ? "Teams personal" : "Teams other";
   }
   if (host === "meet.google.com") {
-    return true;
+    return "Google Meet";
   }
   if (host === "zoom.us" || host.endsWith(".zoom.us")) {
-    return /^\/(j|my)\//.test(path);
+    return /^\/(j|my)\//.test(path) ? "Zoom" : "Zoom other";
   }
   if (host === "webex.com" || host.endsWith(".webex.com")) {
-    return /\/(meet|join)\//.test(path);
+    return /\/(meet|join)\//.test(path) ? "Webex" : "Webex other";
   }
-  return host === "meet.goto.com" || host === "gotomeet.me" || host === "whereby.com";
+  if (host === "meet.goto.com" || host === "gotomeet.me") {
+    return "GoTo";
+  }
+  return host === "whereby.com" ? "Whereby" : "Other";
+}
+
+function isKnownMeetingLink(value) {
+  return [
+    "Teams join",
+    "Teams meet",
+    "Teams personal",
+    "Google Meet",
+    "Zoom",
+    "Webex",
+    "GoTo",
+    "Whereby",
+  ].includes(meetingLinkType(value));
 }
 
 function attachToWindow(window) {
@@ -166,6 +192,7 @@ function attachToWindow(window) {
       let urls = 0;
       let matches = 0;
       let added = 0;
+      const urlTypes = new Map();
 
       for (const row of rows) {
         if (row.querySelector("button[data-one-click-join]")) {
@@ -186,7 +213,7 @@ function attachToWindow(window) {
           (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"')\\]+/gi)].length,
           0
         );
-        const url = findMeetingLink(sources);
+        const url = findMeetingLink(sources, urlTypes);
         if (!url) {
           continue;
         }
@@ -217,7 +244,7 @@ function attachToWindow(window) {
       if (!loggedFirstScan && rows.length) {
         console.info(
           LOG_PREFIX,
-          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with link fields, ${urls} URLs, ${matches} meeting links, ${added} badges.`
+          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with link fields, ${urls} URLs, ${matches} meeting links, ${added} badges. URL types: ${[...urlTypes].map(([type, count]) => `${type}=${count}`).join(", ") || "none"}.`
         );
         loggedFirstScan = true;
       }
