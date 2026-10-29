@@ -1,12 +1,12 @@
 {
   "manifest_version": 2,
   "name": "One-Click Meeting Join",
-  "version": "1.0.25",
+  "version": "1.0.27",
   "description": "Adds a Join badge to calendar events with a meeting link.",
   "browser_specific_settings": {
     "gecko": {
       "id": "one-click-meeting-join@local",
-      "strict_min_version": "140.0.0",
+      "strict_min_version": "102.0.0",
       "strict_max_version": "153.*"
     }
   },
