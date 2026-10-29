@@ -66,18 +66,22 @@ function findMeetingLink(sources, diagnostics) {
       const end = match.index + match[0].length;
       const previousUrls = [...source.slice(0, match.index).matchAll(/https?:\/\/[^\s<>"')\\]+/gi)];
       const previousUrl = previousUrls.at(-1);
-      const nextUrl = /https?:\/\/[^\s<>"')\\]+/gi.exec(source.slice(end));
       const contextStart = Math.max(
         previousUrl ? previousUrl.index + previousUrl[0].length : 0,
         match.index - 160
       );
-      const contextEnd = nextUrl ? end + nextUrl.index : Math.min(source.length, end + 160);
-      const linkContext = `${source.slice(contextStart, match.index)} ${source.slice(end, contextEnd)}`
-        .replace(/<[^>]*>/g, " ");
+      const linkLabel = source.slice(contextStart, match.index)
+        .replace(/<[^>]*>/g, " ")
+        .trim()
+        .replace(/[\s\[<(]+$/, "")
+        .trim();
       const previous = links.get(url.href);
       links.set(url.href, {
         url: url.href,
-        labeledJoin: Boolean(previous?.labeledJoin || /\b(join|attend)\b/i.test(linkContext)),
+        labeledJoin: Boolean(
+          previous?.labeledJoin ||
+          /\b(?:join|attend)(?:\s+(?:the\s+)?(?:meeting|call|session))?(?:\s+now)?\s*:?$/i.test(linkLabel)
+        ),
       });
     }
   }
@@ -180,15 +184,17 @@ function attachToWindow(window) {
     style.id = STYLE_ID;
     style.textContent = `
     .one-click-meeting-join {
-      margin-inline-start: 0.35em;
-      padding: 1px 6px;
+      appearance: none;
+      margin-inline-start: 0.3em;
+      padding: 0 0.35em;
       border: 0;
       border-radius: 1em;
       background: #1683e9;
       color: white;
       cursor: pointer;
       font: inherit;
-      font-size: 0.8em;
+      font-size: 0.7em;
+      line-height: 1.2;
       white-space: nowrap;
     }
     .one-click-meeting-join:focus-visible {
