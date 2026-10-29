@@ -254,7 +254,13 @@ function attachToWindow(window) {
         button.addEventListener("click", event => {
           event.preventDefault();
           event.stopPropagation();
-          Services.externalProtocolService.loadURI(Services.io.newURI(url));
+          console.info(LOG_PREFIX, "Join badge clicked.");
+          try {
+            ChromeUtils.importESModule("resource:///modules/LinkHelper.sys.mjs")
+              .openLinkExternally(url, { addToHistory: false });
+          } catch (error) {
+            console.error(LOG_PREFIX, "Could not open meeting link.", error?.name);
+          }
         });
         button.addEventListener("dblclick", event => event.stopPropagation());
         anchor.after(button);
