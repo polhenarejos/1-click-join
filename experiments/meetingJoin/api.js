@@ -171,6 +171,7 @@ function attachToWindow(window) {
     .one-click-meeting-join {
       appearance: none;
       margin-inline-start: 0.3em;
+      min-width: 0;
       padding: 0 0.15em;
       border: 0;
       border-radius: 1em;
