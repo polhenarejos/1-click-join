@@ -190,7 +190,7 @@ function attachToWindow(window) {
       padding: 0 0.35em;
       border: 0;
       border-radius: 1em;
-      background: #1683e9;
+      background: #188038;
       color: white;
       cursor: pointer;
       font: inherit;
