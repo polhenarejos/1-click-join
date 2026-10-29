@@ -135,6 +135,8 @@ function openMeetingLink(url, appUrl) {
     } catch (error) {
       console.info(LOG_PREFIX, "App launch unavailable; opening the web link.", error?.name);
     }
+  } else {
+    console.info(LOG_PREFIX, `${meetingLinkType(appUrl || url)} has no direct app URI; opening web link.`);
   }
   openLinkExternally(url, { addToHistory: false });
 }
