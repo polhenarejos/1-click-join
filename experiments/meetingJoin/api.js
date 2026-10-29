@@ -78,6 +78,7 @@ function findMeetingLink(sources, diagnostics) {
       const previous = links.get(url.href);
       links.set(url.href, {
         url: url.href,
+        // shortcut: English labels only; add invite-specific translations when they fail to disambiguate links.
         labeledJoin: Boolean(
           previous?.labeledJoin ||
           /\b(?:join|attend)(?:\s+(?:the\s+)?(?:meeting|call|session))?(?:\s+now)?\s*:?$/i.test(linkLabel)
