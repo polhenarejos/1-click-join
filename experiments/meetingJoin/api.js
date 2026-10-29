@@ -15,7 +15,14 @@ function getItemSources(item) {
     return [];
   }
 
-  return ["DESCRIPTION", "URL", "LOCATION"]
+  return [
+    "DESCRIPTION",
+    "X-ALT-DESC",
+    "URL",
+    "LOCATION",
+    "CONFERENCE",
+    "X-MICROSOFT-SKYPETEAMSMEETINGURL",
+  ]
     .map(property => {
       try {
         return item[property.toLowerCase()] || item.getProperty?.(property);
@@ -150,6 +157,7 @@ function attachToWindow(window) {
       const rows = agenda.querySelectorAll("li.agenda-listitem:not(.agenda-listitem-end)");
       let items = 0;
       let itemsWithText = 0;
+      let urls = 0;
       let matches = 0;
       let added = 0;
 
@@ -168,6 +176,10 @@ function attachToWindow(window) {
         if (sources.length) {
           itemsWithText++;
         }
+        urls += sources.reduce(
+          (count, source) => count + [...source.matchAll(/https?:\/\/[^\s<>"']+/gi)].length,
+          0
+        );
         const url = findMeetingLink(sources);
         if (!url) {
           continue;
@@ -199,7 +211,7 @@ function attachToWindow(window) {
       if (!loggedFirstScan && rows.length) {
         console.info(
           LOG_PREFIX,
-          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with text fields, ${matches} meeting links, ${added} badges.`
+          `Today Pane scan: ${rows.length} rows, ${items} items, ${itemsWithText} with link fields, ${urls} URLs, ${matches} meeting links, ${added} badges.`
         );
         loggedFirstScan = true;
       }
