@@ -89,9 +89,12 @@ function findMeetingLink(sources, diagnostics) {
   return candidates.length === 1 ? { url: candidates[0].url } : null;
 }
 
-// shortcut: direct app launch only for Teams /l/ and numeric Zoom /j/ URLs; add other providers when they expose a stable join URI.
+// shortcut: direct app launch only for Teams meeting URLs and numeric Zoom /j/ URLs; add other providers when they expose a stable join URI.
 function nativeMeetingUri(value) {
-  if (meetingLinkType(value) === "Teams join" && /^https:\/\/teams\.microsoft\.com\/l\//i.test(value)) {
+  if (
+    ["Teams join", "Teams meet"].includes(meetingLinkType(value)) &&
+    /^https:\/\/teams\.microsoft\.com\/(?:l\/|meet\/)/i.test(value)
+  ) {
     return value.replace(/^https:/i, "msteams:");
   }
 
@@ -124,9 +127,11 @@ function openMeetingLink(url, appUrl) {
     try {
       const scheme = nativeUrl.slice(0, nativeUrl.indexOf(":"));
       if (Services.externalProtocolService.externalProtocolHandlerExists(scheme)) {
+        console.info(LOG_PREFIX, `Opening meeting with ${scheme} app handler.`);
         openLinkExternally(nativeUrl, { addToHistory: false });
         return;
       }
+      console.info(LOG_PREFIX, `${scheme} app handler unavailable; opening web link.`);
     } catch (error) {
       console.info(LOG_PREFIX, "App launch unavailable; opening the web link.", error?.name);
     }
