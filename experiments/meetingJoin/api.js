@@ -187,15 +187,15 @@ function attachToWindow(window) {
     .one-click-meeting-join {
       appearance: none;
       margin-inline-start: 0.3em;
-      padding: 0 0.35em;
+      padding: 0 0.15em;
       border: 0;
       border-radius: 1em;
       background: #188038;
       color: white;
       cursor: pointer;
       font: inherit;
-      font-size: 0.7em;
-      line-height: 1.2;
+      font-size: 0.8em;
+      line-height: 1;
       white-space: nowrap;
     }
     .one-click-meeting-join:focus-visible {
