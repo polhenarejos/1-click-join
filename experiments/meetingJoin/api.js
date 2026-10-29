@@ -1,9 +1,15 @@
 "use strict";
 
-const { ExtensionSupport } = ChromeUtils.importESModule(
-  "resource:///modules/ExtensionSupport.sys.mjs"
-);
-const Services = globalThis.Services;
+let ExtensionSupport;
+try {
+  ({ ExtensionSupport } = ChromeUtils.importESModule(
+    "resource:///modules/ExtensionSupport.sys.mjs"
+  ));
+} catch {
+  ({ ExtensionSupport } = ChromeUtils.import("resource:///modules/ExtensionSupport.jsm"));
+}
+const Services =
+  globalThis.Services || ChromeUtils.import("resource://gre/modules/Services.jsm").Services;
 
 const MAIN_WINDOW = "chrome://messenger/content/messenger.xhtml";
 const STYLE_ID = "one-click-meeting-join-style";
@@ -118,10 +124,18 @@ function nativeMeetingUri(value) {
   return appUrl.href;
 }
 
-function openMeetingLink(url, appUrl) {
-  const { openLinkExternally } = ChromeUtils.importESModule(
-    "resource:///modules/LinkHelper.sys.mjs"
-  );
+function openMeetingLink(window, url, appUrl) {
+  let openLinkExternally;
+  try {
+    ({ openLinkExternally } = ChromeUtils.importESModule(
+      "resource:///modules/LinkHelper.sys.mjs"
+    ));
+  } catch {
+    openLinkExternally = window.openLinkExternally?.bind(window);
+  }
+  if (typeof openLinkExternally !== "function") {
+    throw new Error("External link handler unavailable.");
+  }
   const nativeUrl = nativeMeetingUri(appUrl || url);
   if (nativeUrl) {
     try {
@@ -302,7 +316,7 @@ function attachToWindow(window) {
           event.stopPropagation();
           console.info(LOG_PREFIX, "Join badge clicked.");
           try {
-            openMeetingLink(url, appUrl);
+            openMeetingLink(window, url, appUrl);
           } catch (error) {
             console.error(LOG_PREFIX, "Could not open meeting link.", error?.name);
           }
